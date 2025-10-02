@@ -6,6 +6,8 @@ using human_resources.Model;
 using human_resources.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.ComponentModel.DataAnnotations;
+using System.Security.Cryptography.X509Certificates;
 
 namespace human_resources
 {
@@ -128,8 +130,20 @@ namespace human_resources
 
             apiGroup.MapGet("/test1", () => Results.Redirect(new Uri("https://google.com").ToString())).WithName("test1");
             apiGroup.MapGet("/test2", () => Results.Redirect("test1")).WithName("test2");
+            apiGroup.MapGet("/test3", (HttpRequest httpRequest, TestModel testModel) => 
+            {
+                var validationResults = new List<ValidationResult>();
+                var isValid = Validator.TryValidateObject(testModel, new ValidationContext(testModel), validationResults, true);
+            });
+
 
             app.Run();
+        }
+        public record TestModel
+        {
+            [Required]
+            [MaxLength(100)]
+            public string Name { get; set; }
         }
     }
 }
