@@ -128,22 +128,50 @@ namespace human_resources
                 return $"View the product at {link}";
             });
 
-            apiGroup.MapGet("/test1", () => Results.Redirect(new Uri("https://google.com").ToString())).WithName("test1");
-            apiGroup.MapGet("/test2", () => Results.Redirect("test1")).WithName("test2");
-            apiGroup.MapGet("/test3", (HttpRequest httpRequest, TestModel testModel) => 
+            apiGroup.MapGet("/sendEmailMe/{userName}", SendEmail);
+
+            string SendEmail(string userName, [FromServices] IEmailSender emailSender)
             {
-                var validationResults = new List<ValidationResult>();
-                var isValid = Validator.TryValidateObject(testModel, new ValidationContext(testModel), validationResults, true);
-            });
-
-
+                emailSender.SendEmail(userName);
+                return $"Emailt sent to {userName}";
+            }
+            
             app.Run();
         }
-        public record TestModel
+
+        public interface IEmailSender
         {
-            [Required]
-            [MaxLength(100)]
-            public string Name { get; set; }
+            public void SendEmail(string userName);
         }
+        public class EmailSender : IEmailSender
+        {
+            private readonly MessageFactory _messageFactory;
+            private readonly NetworkClient _networkClient;
+            public EmailSender(MessageFactory messageFactory, NetworkClient networkClient)
+            {
+                _messageFactory = messageFactory;
+                _networkClient = networkClient;
+            }  
+            public void SendEmail(string userName)
+            {
+                var email = _messageFactory.CreateEmail(userName);
+                _networkClient.SendEmail(email);
+            }
+        }
+        public class MessageFactory
+        {
+            public string CreateEmail(string userName)
+            {
+                return $"Email to {userName}";
+            }
+        }
+        public class NetworkClient
+        {
+            public void SendEmail(string email)
+            {
+                Console.WriteLine($"Отправлено: {email}");
+            }
+        }
+
     }
 }
