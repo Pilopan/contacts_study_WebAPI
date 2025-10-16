@@ -60,6 +60,9 @@ namespace human_resources
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+            builder.Services.AddScoped<IEmailSender, EmailSender>();
+            builder.Services.AddScoped<MessageFactory>();
+            builder.Services.AddScoped<NetworkClient>();
 
             var app = builder.Build();
             if (app.Environment.IsDevelopment())
@@ -130,7 +133,7 @@ namespace human_resources
 
             apiGroup.MapGet("/sendEmailMe/{userName}", SendEmail);
 
-            string SendEmail(string userName, [FromServices] IEmailSender emailSender)
+            string SendEmail(string userName, IEmailSender emailSender)
             {
                 emailSender.SendEmail(userName);
                 return $"Emailt sent to {userName}";
