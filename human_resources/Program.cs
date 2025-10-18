@@ -63,6 +63,8 @@ namespace human_resources
             builder.Services.AddScoped<IEmailSender, EmailSender>();
             builder.Services.AddScoped<MessageFactory>();
             builder.Services.AddScoped<NetworkClient>();
+            builder.Services.AddScoped<DbContext>();
+            builder.Services.AddScoped<Repository>();
 
             var app = builder.Build();
             if (app.Environment.IsDevelopment())
@@ -133,15 +135,25 @@ namespace human_resources
 
             apiGroup.MapGet("/sendEmailMe/{userName}", SendEmail);
 
+            apiGroup.MapGet("/GetDbRowCount", GetRowCount);
+
             string SendEmail(string userName, IEmailSender emailSender)
             {
                 emailSender.SendEmail(userName);
                 return $"Emailt sent to {userName}";
             }
+
+            static string GetRowCount(DbContext dbContext, Repository repository)
+            {
+                var dbContextRowCount = dbContext.RowCount;
+                var repositoryRowCount = repository.rowCount;
+
+                return $"Количество строк dbContextRowCount {dbContextRowCount}, repositoryRowCount {repositoryRowCount}";
+            }
+
             
             app.Run();
         }
-
         public interface IEmailSender
         {
             public void SendEmail(string userName);
@@ -175,6 +187,19 @@ namespace human_resources
                 Console.WriteLine($"Отправлено: {email}");
             }
         }
+        class Repository
+        {
+            readonly private DbContext _dbContext;
+            public Repository(DbContext dbContext)
+            {
+                _dbContext = dbContext;
+            }
+            public int rowCount => _dbContext.RowCount;
+        }
 
+        class DbContext
+        {
+            public int RowCount { get; } = Random.Shared.Next(0, 1_000_000_000);
+        }
     }
 }
