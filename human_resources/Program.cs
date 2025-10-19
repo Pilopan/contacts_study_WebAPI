@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Cryptography.X509Certificates;
+using System.ComponentModel.Design;
+using Microsoft.Extensions.Options;
 
 namespace human_resources
 {
@@ -16,45 +18,6 @@ namespace human_resources
 
         public static void Main(string[] args)
         {
-            //
-
-            //var _persons = new ConcurrentDictionary<int, Person>();
-
-            //var builder = WebApplication.CreateBuilder(args);
-            //var app = builder.Build();
-
-            ////CRUD = Create Read Update Delete
-
-
-            //var group = app.MapGroup("/Person");
-            //group.AddEndpointFilterFactory(ValidationHelpers.ValidateIdFactory);
-            //group.AddEndpointFilter<IdValidationFilter>();
-            ////Create
-            //group.MapPost("/add", (Person person) =>
-            //    _persons.TryAdd(person.Id, person) ?
-            //        TypedResults.Created("/add", person)
-            //        : Results.ValidationProblem(new Dictionary<string, string[]>
-            //        {
-            //            {person.Id.ToString(), new[] {"A person with this ID already exists"} }
-            //        }));
-            ////Read (All)
-            //group.MapGet("/GetAll", () => _persons);
-
-            ////Read (Id)
-            //group.MapGet("/GetById/{id}", (int id) => _persons.TryGetValue(id, out Person person) ?
-            //                                            TypedResults.Ok<Person>(person) :
-            //                                            Results.NotFound());
-            ////Update
-            //group.MapPut("/{id}", (Person person, int id) =>
-            //{
-            //    _persons[id] = person;
-            //});
-
-            ////Delete
-            //group.MapDelete("/{id}", (int id) => _persons.TryRemove(id, out Person person) ?
-            //                                                TypedResults.Ok<Person>(person) :
-            //                                                Results.NotFound());
-            //app.Run();
             ConcurrentDictionary<int, Contact> _contact = new ConcurrentDictionary<int, Contact>();
 
             var builder = WebApplication.CreateBuilder(args);
@@ -65,6 +28,10 @@ namespace human_resources
             builder.Services.AddScoped<NetworkClient>();
             builder.Services.AddScoped<DbContext>();
             builder.Services.AddScoped<Repository>();
+            builder.Services.Configure<MyWebAppSetting>(builder.Configuration.GetSection("Setting"));
+//            builder.Configuration.Sources.Clear();
+            builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+            builder.Configuration.AddEnvironmentVariables();
 
             var app = builder.Build();
             if (app.Environment.IsDevelopment())
@@ -86,9 +53,9 @@ namespace human_resources
                                                           Results.NotFound());
 
             //POST /api/contacts — создать новый контакт.
-            apiGroup.MapPost("/contacts", (ContactRequest contactRequest, [FromHeader(Name = "Content-Type")] string contentType) => 
+            apiGroup.MapPost("/contacts", (ContactRequest contactRequest, [FromHeader(Name = "Content-Type")] string contentType) =>
             {
-                Contact contact = new Contact() 
+                Contact contact = new Contact()
                 {
                     Id = IdGenereationService.GenerateNextIdValue(_contact),
                     FirstName = contactRequest.FirstName,
@@ -105,9 +72,9 @@ namespace human_resources
                         {contact.Id.ToString(), new[] {"A person with this ID already exists"} }
                     });
             });
-             
+
             //PUT /api/contacts/{id} — обновить существующий контакт.
-            apiGroup.MapPut("/contacts/{id:int}", ([FromRoute] int id, ContactRequest contactRequest, [FromHeader (Name = "Content-Type")] string contentType) => 
+            apiGroup.MapPut("/contacts/{id:int}", ([FromRoute] int id, ContactRequest contactRequest, [FromHeader(Name = "Content-Type")] string contentType) =>
             {
                 Contact contact = new Contact()
                 {
@@ -127,9 +94,9 @@ namespace human_resources
                                                              TypedResults.Ok(contact) :
                                                              Results.NotFound());
 
-            apiGroup.MapGet("/links", (LinkGenerator links) => 
+            apiGroup.MapGet("/links", (LinkGenerator links) =>
             {
-                string link = links.GetUriByName("Contacts", new { },"https", new HostString("localhost:7135"));
+                string link = links.GetUriByName("Contacts", new { }, "https", new HostString("localhost:7135"));
                 return $"View the product at {link}";
             });
 
@@ -151,9 +118,22 @@ namespace human_resources
                 return $"Количество строк dbContextRowCount {dbContextRowCount}, repositoryRowCount {repositoryRowCount}";
             }
 
-            
+            apiGroup.MapGet("/configuration", (IOptions<MyWebAppSetting> options) =>
+            {
+                return options.Value.ApplicationNameRu.Name;
+            });
+            apiGroup.MapGet("/configurationAll", () => app.Configuration.AsEnumerable());
             app.Run();
         }
+        public class MyWebAppSetting
+        {
+            public ApplicationNameRu ApplicationNameRu { get; set; }
+        }
+        public class ApplicationNameRu
+        {
+            public string Name { get; set; }
+        }
+
         public interface IEmailSender
         {
             public void SendEmail(string userName);
@@ -166,7 +146,7 @@ namespace human_resources
             {
                 _messageFactory = messageFactory;
                 _networkClient = networkClient;
-            }  
+            }
             public void SendEmail(string userName)
             {
                 var email = _messageFactory.CreateEmail(userName);
