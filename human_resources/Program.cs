@@ -157,14 +157,14 @@ namespace human_resources
         {
             public string CreateEmail(string userName)
             {
-                return $"Email to {userName}";
+                return $"Сообщений для: {userName}";
             }
         }
         public class NetworkClient
         {
             public void SendEmail(string email)
             {
-                Console.WriteLine($"Отправлено: {email}");
+                Console.WriteLine($"Направлено: {email}");
             }
         }
         class Repository
